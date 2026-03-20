@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -52,12 +53,23 @@ class AgentService:
 
     def chat(self, message: str) -> dict[str, Any]:
         self.store.append_conversation("operator", message)
+        applied_updates = self._apply_chat_updates(message)
         for item in self._memory_hints(message):
             self.store.add_memory_item(item)
-        reply = self._build_reply(message)
+        reply = self._build_reply(message, applied_updates)
         self.store.append_conversation("agent", reply)
-        self.audit_logger.log_event("agent_chat", "Processed operator coaching", {"message": message})
-        return {"reply": reply, "agent": self.store.get_agent_state()}
+        self.audit_logger.log_event(
+            "agent_chat",
+            "Processed operator coaching",
+            {"message": message, "applied_updates": applied_updates},
+        )
+        return {
+            "reply": reply,
+            "agent": self.store.get_agent_state(),
+            "portals": self.store.get_portals(),
+            "status": self.store.get_status(),
+            "applied_updates": applied_updates,
+        }
 
     def run_portal_test(self, portal_id: str) -> dict[str, Any]:
         portal = self._portal_by_id(portal_id)
@@ -153,8 +165,15 @@ class AgentService:
             hints.append("Invoice availability may depend on a specific billing window.")
         return hints
 
-    def _build_reply(self, message: str) -> str:
+    def _build_reply(self, message: str, applied_updates: dict[str, Any]) -> str:
         lowered = message.lower()
+        if applied_updates:
+            portal_name = applied_updates.get("portal_name", "the portal")
+            fields = ", ".join(applied_updates.get("fields", []))
+            return (
+                f"I have saved your instruction for {portal_name}. Updated fields: {fields}. "
+                "You can review them immediately in Portal Configuration."
+            )
         if "orange" in lowered and ("billing" in lowered or "facturas" in lowered):
             return (
                 "Understood. For Orange, I would first observe the page, confirm I can "
@@ -179,6 +198,143 @@ class AgentService:
             "I can use that guidance as operator coaching. In the real version, I would "
             "convert it into observable checks, safe actions, and memory for future portal runs."
         )
+
+    def _apply_chat_updates(self, message: str) -> dict[str, Any]:
+        lowered = message.lower()
+        portal = self._match_portal_from_message(lowered)
+        if portal is None:
+            return {}
+
+        updates: dict[str, Any] = {}
+
+        folder_value = self._extract_value(message, lowered, ["download folder", "carpeta", "guardar en"])
+        if folder_value:
+            updates["download_folder"] = folder_value
+
+        email_value = self._extract_value(message, lowered, ["target email", "email", "correo"])
+        if email_value:
+            updates["target_email"] = email_value
+
+        credentials_value = self._extract_value(message, lowered, ["credentials label", "credenciales", "label"])
+        if credentials_value:
+            updates["credentials_label"] = credentials_value.replace(" ", "_").upper()
+
+        login_url = self._extract_url_after_keywords(message, ["login url", "url de login", "entra en", "login"])
+        if login_url:
+            updates["login_url"] = login_url
+
+        billing_url = self._extract_url_after_keywords(message, ["billing url", "url de facturas", "url de billing"])
+        if billing_url:
+            updates["billing_url"] = billing_url
+
+        billing_label = self._extract_quoted_or_suffix_value(
+            message,
+            lowered,
+            ["billing label", "facturas", "billing"],
+        )
+        if billing_label and any(token in lowered for token in ["label", "etiqueta", "texto", "facturas", "billing"]):
+            updates["billing_link_text"] = billing_label
+
+        download_label = self._extract_quoted_or_suffix_value(
+            message,
+            lowered,
+            ["download label", "texto de descarga", "descargar pdf", "download pdf"],
+        )
+        if download_label and any(token in lowered for token in ["download", "descarga", "descargar"]):
+            updates["download_button_text"] = download_label
+
+        invoice_match = self._extract_quoted_or_suffix_value(
+            message,
+            lowered,
+            ["invoice match", "texto de factura", "match text"],
+        )
+        if invoice_match and any(token in lowered for token in ["invoice", "factura", "match"]):
+            updates["invoice_match_text"] = invoice_match
+
+        if "headless false" in lowered or "sin headless" in lowered or "mostrar navegador" in lowered:
+            updates["headless"] = False
+        elif "headless true" in lowered or "oculta navegador" in lowered:
+            updates["headless"] = True
+
+        if "activa" in lowered or "activate" in lowered:
+            updates["status"] = "active"
+        elif "pausa" in lowered or "pause" in lowered:
+            updates["status"] = "paused"
+        elif "desactiva" in lowered or "inactive" in lowered:
+            updates["status"] = "inactive"
+
+        if "monthly" in lowered or "mensual" in lowered:
+            updates["frequency"] = "monthly"
+        elif "weekly" in lowered or "semanal" in lowered:
+            updates["frequency"] = "weekly"
+        elif "manual" in lowered:
+            updates["frequency"] = "manual"
+
+        window_match = re.search(r"(days?\s+\d+\s+(?:to|-)\s+\d+|d[ií]as?\s+\d+\s+(?:a|-)\s+\d+)", lowered)
+        if window_match:
+            updates["invoice_window"] = window_match.group(1).replace("dias", "días")
+
+        if not updates:
+            return {}
+
+        updated_portal = self.store.update_portal(portal["id"], updates)
+        self.audit_logger.log_event("portal_update_from_chat", f"Updated {portal['id']} from chat", updates)
+        return {
+            "portal_id": portal["id"],
+            "portal_name": updated_portal["name"],
+            "fields": sorted(updates.keys()),
+        }
+
+    def _match_portal_from_message(self, lowered: str) -> dict[str, Any] | None:
+        portals = self.store.get_portals()
+        for portal in portals:
+            if portal["name"].lower() in lowered:
+                return portal
+        if "orange" in lowered:
+            return next((portal for portal in portals if portal["id"] == "orange-spain"), None)
+        return None
+
+    def _extract_value(self, message: str, lowered: str, keywords: list[str]) -> str | None:
+        for keyword in keywords:
+            index = lowered.find(keyword)
+            if index == -1:
+                continue
+            snippet = message[index + len(keyword):].strip(" :.-")
+            if snippet:
+                return self._trim_instruction_value(snippet)
+        return None
+
+    def _extract_url_after_keywords(self, message: str, keywords: list[str]) -> str | None:
+        url_match = re.search(r"https?://\S+", message)
+        if not url_match:
+            return None
+        lowered = message.lower()
+        for keyword in keywords:
+            if keyword in lowered:
+                return url_match.group(0).rstrip(".,)")
+        return None
+
+    def _extract_quoted_or_suffix_value(self, message: str, lowered: str, keywords: list[str]) -> str | None:
+        quoted = re.search(r'"([^"]+)"', message)
+        if quoted:
+            return quoted.group(1).strip()
+        for keyword in keywords:
+            index = lowered.find(keyword)
+            if index == -1:
+                continue
+            snippet = message[index + len(keyword):].strip(" :.-")
+            if snippet:
+                return self._trim_instruction_value(snippet)
+        return None
+
+    def _trim_instruction_value(self, snippet: str) -> str:
+        first_line = snippet.splitlines()[0].strip()
+        segments = re.split(r"\s(?:y|and)\s|,|;", first_line, maxsplit=1)
+        value = segments[0].strip().strip(".")
+        for prefix in ("en ", "to ", "is ", "es "):
+            if value.lower().startswith(prefix):
+                value = value[len(prefix):].strip()
+        return value
 
 
 def create_app_handler(service: AgentService):

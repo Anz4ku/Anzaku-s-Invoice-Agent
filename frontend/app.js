@@ -514,6 +514,15 @@ async function handleChatSubmit(event) {
     });
     appState.agent.conversation = response.agent.conversation;
     appState.agent.memory = response.agent.memory;
+    if (response.portals) {
+      appState.portals = response.portals;
+    }
+    if (response.status) {
+      appState.dashboard.currentStatus = response.status.current_status;
+      appState.dashboard.configuredPortals = response.status.configured_portals;
+      appState.dashboard.nextRun = response.status.next_run;
+      appState.dashboard.lastInvoice = response.status.last_invoice;
+    }
   } else {
     appState.agent.conversation.push({ role: "operator", text: message });
     rememberFromMessage(message);
@@ -524,6 +533,8 @@ async function handleChatSubmit(event) {
 
   renderChat();
   renderMemory();
+  renderDashboard();
+  renderPortalCards();
   input.value = "";
 }
 
