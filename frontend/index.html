@@ -48,8 +48,8 @@
             </p>
           </div>
           <div class="status-panel">
-            <span class="status-pill">Prototype Ready</span>
-            <p class="status-caption">Local worker not connected yet</p>
+            <span id="connectionBadge" class="status-pill">Prototype Ready</span>
+            <p id="connectionCaption" class="status-caption">Local worker not connected yet</p>
           </div>
         </section>
 
@@ -110,6 +110,9 @@
                   <button class="button-primary" type="submit">Send to agent</button>
                 </div>
               </form>
+              <p id="chatModeNote" class="chat-mode-note">
+                Running in prototype mode. Start the local API to persist real operator guidance.
+              </p>
             </div>
             <div class="agent-side-panel">
               <article class="memory-card">

@@ -1,132 +1,314 @@
-// Static rendering logic for the visual prototype.
-// Buttons do not persist data to a backend in v1; the chat uses local browser storage only.
+// Frontend logic for the static dashboard plus optional local worker API bridge.
+// If the local API is running, the UI reads and writes real local state.
+// Otherwise it falls back to browser-only prototype behavior.
 
-const data = window.mockData;
+const API_BASE = "http://127.0.0.1:8765/api";
+const PORTAL_STORAGE_KEY = "ai-invoice-agent-portals";
 const CHAT_STORAGE_KEY = "ai-invoice-agent-chat";
 const MEMORY_STORAGE_KEY = "ai-invoice-agent-memory";
 
-const setText = (id, value) => {
-  const node = document.getElementById(id);
-  if (node) node.textContent = value;
+const fallbackData = window.mockData;
+
+const appState = {
+  connected: false,
+  dashboard: { ...fallbackData.dashboard },
+  portals: loadStoredList(PORTAL_STORAGE_KEY, fallbackData.portals),
+  runs: [...fallbackData.runs],
+  invoices: [...fallbackData.invoices],
+  errors: [...fallbackData.errors],
+  logic: [...fallbackData.logic],
+  roadmap: [...fallbackData.roadmap],
+  agent: {
+    suggestions: [...fallbackData.agent.suggestions],
+    conversation: loadStoredList(CHAT_STORAGE_KEY, fallbackData.agent.conversation),
+    memory: loadStoredList(MEMORY_STORAGE_KEY, fallbackData.agent.memory),
+  },
 };
 
-const chipClass = (value) => {
+function setText(id, value) {
+  const node = document.getElementById(id);
+  if (node) node.textContent = value;
+}
+
+function chipClass(value) {
   if (value === "active" || value === "success") return "chip active";
   if (value === "inactive" || value === "failed") return "chip paused";
   return "chip manual";
-};
+}
 
-const escapeHtml = (value) =>
-  value
+function escapeHtml(value) {
+  return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
 
-const loadStoredList = (key, fallback) => {
+function loadStoredList(key, fallback) {
   try {
     const raw = window.localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch (_error) {
     return fallback;
   }
-};
+}
 
-const saveStoredList = (key, value) => {
+function saveStoredList(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (_error) {
-    // Ignore localStorage failures in the static prototype.
+    // Ignore browser storage failures in prototype mode.
   }
-};
+}
 
-let chatHistory = loadStoredList(CHAT_STORAGE_KEY, data.agent.conversation);
-let memoryItems = loadStoredList(MEMORY_STORAGE_KEY, data.agent.memory);
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    ...options,
+  });
 
-const renderPortalCards = () => {
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function syncLocalPrototype() {
+  saveStoredList(PORTAL_STORAGE_KEY, appState.portals);
+  saveStoredList(CHAT_STORAGE_KEY, appState.agent.conversation);
+  saveStoredList(MEMORY_STORAGE_KEY, appState.agent.memory);
+}
+
+function renderDashboard() {
+  setText("currentStatus", appState.dashboard.currentStatus);
+  setText("configuredPortals", appState.dashboard.configuredPortals);
+  setText("nextRun", appState.dashboard.nextRun);
+  setText("lastInvoice", appState.dashboard.lastInvoice);
+
+  const badge = document.getElementById("connectionBadge");
+  const caption = document.getElementById("connectionCaption");
+  const modeNote = document.getElementById("chatModeNote");
+
+  if (appState.connected) {
+    badge.textContent = "Local API Connected";
+    caption.textContent = "Operator changes are being saved to the local worker";
+    modeNote.textContent = "Connected to the local worker API. Portal edits and coaching are persisted locally.";
+  } else {
+    badge.textContent = "Prototype Ready";
+    caption.textContent = "Local worker not connected yet";
+    modeNote.textContent = "Running in prototype mode. Start the local API to persist real operator guidance.";
+  }
+}
+
+function renderPortalCards() {
   const root = document.getElementById("portalCards");
-  root.innerHTML = data.portals
+  root.innerHTML = appState.portals
     .map(
       (portal) => `
-        <article class="portal-card">
+        <article class="portal-card" data-portal-id="${escapeHtml(portal.id)}">
           <div class="portal-header">
             <div>
               <p class="label">Portal</p>
-              <h3>${portal.name}</h3>
+              <h3>${escapeHtml(portal.name)}</h3>
             </div>
-            <span class="${chipClass(portal.status)}">${portal.status}</span>
+            <span class="${chipClass(portal.status)}">${escapeHtml(portal.status)}</span>
           </div>
-          <p class="helper">Visual placeholder configuration for the future local worker.</p>
-          <div class="portal-meta">
-            <div class="meta-box"><span>Frequency</span>${portal.frequency}</div>
-            <div class="meta-box"><span>Invoice window</span>${portal.invoiceWindow}</div>
-            <div class="meta-box"><span>Target email</span>${portal.targetEmail}</div>
-            <div class="meta-box"><span>Download folder</span>${portal.downloadFolder}</div>
+          <p class="helper">
+            ${
+              appState.connected
+                ? "This configuration is connected to the local worker API."
+                : "Prototype mode: changes are stored in this browser until the local API is running."
+            }
+          </p>
+          <div class="portal-form-grid">
+            <label class="field-group">
+              <span>Status</span>
+              <select name="status">
+                ${["active", "inactive", "paused"]
+                  .map(
+                    (option) =>
+                      `<option value="${option}" ${portal.status === option ? "selected" : ""}>${option}</option>`
+                  )
+                  .join("")}
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Frequency</span>
+              <select name="frequency">
+                ${["manual", "weekly", "monthly"]
+                  .map(
+                    (option) =>
+                      `<option value="${option}" ${portal.frequency === option ? "selected" : ""}>${option}</option>`
+                  )
+                  .join("")}
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Invoice window</span>
+              <input name="invoice_window" value="${escapeHtml(portal.invoice_window)}" />
+            </label>
+            <label class="field-group">
+              <span>Target email</span>
+              <input name="target_email" value="${escapeHtml(portal.target_email)}" />
+            </label>
+            <label class="field-group">
+              <span>Download folder</span>
+              <input name="download_folder" value="${escapeHtml(portal.download_folder)}" />
+            </label>
+            <label class="field-group">
+              <span>Credentials label</span>
+              <input name="credentials_label" value="${escapeHtml(portal.credentials_label || "")}" />
+            </label>
           </div>
-          <p><strong>Notes:</strong> ${portal.notes}</p>
+          <label class="field-group field-group-full">
+            <span>Notes</span>
+            <textarea name="notes" rows="4">${escapeHtml(portal.notes)}</textarea>
+          </label>
           <div class="button-row">
-            <button class="button-primary" type="button">Save</button>
-            <button class="button-secondary" type="button">Pause</button>
-            <button class="button-ghost" type="button">Run test</button>
+            <button class="button-primary" type="button" data-action="save">Save</button>
+            <button class="button-secondary" type="button" data-action="pause">Pause</button>
+            <button class="button-ghost" type="button" data-action="test">Run test</button>
           </div>
         </article>
       `
     )
     .join("");
-};
 
-const renderList = (id, items, stateKey) => {
+  root.querySelectorAll("[data-action='save']").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const card = event.currentTarget.closest("[data-portal-id]");
+      await savePortalCard(card);
+    });
+  });
+
+  root.querySelectorAll("[data-action='pause']").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const card = event.currentTarget.closest("[data-portal-id]");
+      card.querySelector("[name='status']").value = "paused";
+      await savePortalCard(card);
+    });
+  });
+
+  root.querySelectorAll("[data-action='test']").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const card = event.currentTarget.closest("[data-portal-id]");
+      await runPortalTest(card.dataset.portalId);
+    });
+  });
+}
+
+function collectPortalUpdates(card) {
+  const fields = ["status", "frequency", "invoice_window", "target_email", "download_folder", "notes", "credentials_label"];
+  return Object.fromEntries(
+    fields.map((name) => [name, card.querySelector(`[name='${name}']`).value.trim()])
+  );
+}
+
+async function savePortalCard(card) {
+  const portalId = card.dataset.portalId;
+  const updates = collectPortalUpdates(card);
+
+  if (appState.connected) {
+    const response = await apiRequest(`/portals/${portalId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+    appState.portals = appState.portals.map((portal) => (portal.id === portalId ? response.portal : portal));
+  } else {
+    appState.portals = appState.portals.map((portal) => (portal.id === portalId ? { ...portal, ...updates } : portal));
+    syncLocalPrototype();
+  }
+
+  renderPortalCards();
+}
+
+async function runPortalTest(portalId) {
+  if (appState.connected) {
+    const response = await apiRequest(`/portals/${portalId}/test`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    appState.runs = response.activity.runs;
+  } else {
+    const portal = appState.portals.find((item) => item.id === portalId);
+    appState.runs.unshift({
+      title: `${portal.name} operator test`,
+      state: "success",
+      timestamp: new Date().toLocaleString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).replace(",", " ·"),
+      details: "Prototype test queued in browser mode. Start the local API for persistent run history.",
+    });
+    appState.runs = appState.runs.slice(0, 20);
+  }
+
+  renderActivity();
+}
+
+function renderActivity() {
+  renderList("runHistory", appState.runs, "state");
+  renderList("invoiceHistory", appState.invoices);
+  renderList("errorHistory", appState.errors);
+}
+
+function renderList(id, items, stateKey) {
   const root = document.getElementById(id);
   root.innerHTML = items
     .map(
       (item) => `
         <article class="list-item">
           <div class="list-header">
-            <h4>${item.title}</h4>
-            ${stateKey && item[stateKey] ? `<span class="${chipClass(item[stateKey])}">${item[stateKey]}</span>` : ""}
+            <h4>${escapeHtml(item.title)}</h4>
+            ${stateKey && item[stateKey] ? `<span class="${chipClass(item[stateKey])}">${escapeHtml(item[stateKey])}</span>` : ""}
           </div>
-          <p>${item.timestamp}</p>
-          <p>${item.details}</p>
+          <p>${escapeHtml(item.timestamp)}</p>
+          <p>${escapeHtml(item.details)}</p>
         </article>
       `
     )
     .join("");
-};
+}
 
-const renderLogic = () => {
+function renderLogic() {
   const root = document.getElementById("logicSteps");
-  root.innerHTML = data.logic
+  root.innerHTML = appState.logic
     .map(
       (step, index) => `
         <article class="logic-step">
           <div class="step-number">${index + 1}</div>
-          <h3>${step.title}</h3>
-          <p>${step.description}</p>
+          <h3>${escapeHtml(step.title)}</h3>
+          <p>${escapeHtml(step.description)}</p>
         </article>
       `
     )
     .join("");
-};
+}
 
-const renderRoadmap = () => {
+function renderRoadmap() {
   const root = document.getElementById("roadmapItems");
-  root.innerHTML = data.roadmap
+  root.innerHTML = appState.roadmap
     .map(
       (item) => `
         <article class="roadmap-item">
           <p class="label">Orange step</p>
-          <h3>${item.title}</h3>
-          <p>${item.description}</p>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.description)}</p>
         </article>
       `
     )
     .join("");
-};
+}
 
-const renderSuggestions = () => {
+function renderSuggestions() {
   const root = document.getElementById("chatSuggestions");
-  root.innerHTML = data.agent.suggestions
+  root.innerHTML = appState.agent.suggestions
     .map(
       (suggestion) => `
         <button class="suggestion-chip" type="button">${escapeHtml(suggestion)}</button>
@@ -141,11 +323,11 @@ const renderSuggestions = () => {
       input.focus();
     });
   });
-};
+}
 
-const renderMemory = () => {
+function renderMemory() {
   const root = document.getElementById("memoryList");
-  root.innerHTML = memoryItems
+  root.innerHTML = appState.agent.memory
     .map(
       (item) => `
         <div class="memory-item">
@@ -155,11 +337,11 @@ const renderMemory = () => {
       `
     )
     .join("");
-};
+}
 
-const renderChat = () => {
+function renderChat() {
   const root = document.getElementById("chatMessages");
-  root.innerHTML = chatHistory
+  root.innerHTML = appState.agent.conversation
     .map(
       (message) => `
         <article class="chat-message ${message.role === "agent" ? "agent-message" : "operator-message"}">
@@ -170,57 +352,55 @@ const renderChat = () => {
     )
     .join("");
   root.scrollTop = root.scrollHeight;
-};
+}
 
-const rememberFromMessage = (message) => {
+function rememberFromMessage(message) {
   const lowered = message.toLowerCase();
-  const candidates = [];
+  const hints = [];
 
   if (lowered.includes("billing") || lowered.includes("facturas")) {
-    candidates.push("Check for Billing or Facturas labels before navigating deeper.");
+    hints.push("Check for Billing or Facturas labels before navigating deeper.");
   }
   if (lowered.includes("pdf")) {
-    candidates.push("Verify that the final download is a PDF before closing the run.");
+    hints.push("Verify that the final download is a PDF before closing the run.");
   }
   if (lowered.includes("orange")) {
-    candidates.push("Orange-specific coaching has been provided by the operator.");
+    hints.push("Orange-specific coaching has been provided by the operator.");
   }
   if (lowered.includes("screenshot")) {
-    candidates.push("If the expected page is missing, capture a screenshot before retrying.");
+    hints.push("If the expected page is missing, capture a screenshot before retrying.");
   }
-  if (lowered.includes("days") || lowered.includes("window")) {
-    candidates.push("Invoice availability may depend on a specific billing window.");
+  if (lowered.includes("window") || lowered.includes("days")) {
+    hints.push("Invoice availability may depend on a specific billing window.");
   }
 
-  candidates.forEach((item) => {
-    if (!memoryItems.includes(item)) {
-      memoryItems.unshift(item);
+  hints.forEach((item) => {
+    if (!appState.agent.memory.includes(item)) {
+      appState.agent.memory.unshift(item);
     }
   });
 
-  memoryItems = memoryItems.slice(0, 6);
-  saveStoredList(MEMORY_STORAGE_KEY, memoryItems);
-};
+  appState.agent.memory = appState.agent.memory.slice(0, 10);
+}
 
-const buildAgentReply = (message) => {
+function buildPrototypeReply(message) {
   const lowered = message.toLowerCase();
-
   if (lowered.includes("orange") && (lowered.includes("billing") || lowered.includes("facturas"))) {
     return "Understood. For Orange, I would first observe the page, confirm I can see Billing or Facturas, and only then continue toward invoices.";
   }
   if (lowered.includes("pdf")) {
     return "I would treat PDF validation as part of verification: confirm the file downloaded correctly, confirm the extension is PDF, and record the saved location.";
   }
-  if (lowered.includes("remember") || lowered.includes("aprende") || lowered.includes("learn")) {
-    return "I would save that as operator guidance for future runs. In the real product, this would become portal memory that the local worker can reuse.";
+  if (lowered.includes("remember") || lowered.includes("learn") || lowered.includes("aprende")) {
+    return "I would save that as operator guidance for future runs. In the real product, this becomes portal memory that the local worker can reuse.";
   }
   if (lowered.includes("error") || lowered.includes("fails") || lowered.includes("if not")) {
     return "That is a useful fallback rule. I would stop, capture context, and avoid continuing if the page does not match the expected state.";
   }
   return "I can use that guidance as operator coaching. In the real version, I would convert it into observable checks, safe actions, and memory for future portal runs.";
-};
+}
 
-const handleChatSubmit = (event) => {
+async function handleChatSubmit(event) {
   event.preventDefault();
   const input = document.getElementById("chatInput");
   const message = input.value.trim();
@@ -229,40 +409,85 @@ const handleChatSubmit = (event) => {
     return;
   }
 
-  chatHistory.push({ role: "operator", text: message });
-  rememberFromMessage(message);
-  chatHistory.push({ role: "agent", text: buildAgentReply(message) });
+  if (appState.connected) {
+    const response = await apiRequest("/chat", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    });
+    appState.agent.conversation = response.agent.conversation;
+    appState.agent.memory = response.agent.memory;
+  } else {
+    appState.agent.conversation.push({ role: "operator", text: message });
+    rememberFromMessage(message);
+    appState.agent.conversation.push({ role: "agent", text: buildPrototypeReply(message) });
+    appState.agent.conversation = appState.agent.conversation.slice(-20);
+    syncLocalPrototype();
+  }
 
-  chatHistory = chatHistory.slice(-14);
-  saveStoredList(CHAT_STORAGE_KEY, chatHistory);
   renderChat();
   renderMemory();
   input.value = "";
-};
+}
 
-const clearChat = () => {
-  chatHistory = [...data.agent.conversation];
-  memoryItems = [...data.agent.memory];
-  saveStoredList(CHAT_STORAGE_KEY, chatHistory);
-  saveStoredList(MEMORY_STORAGE_KEY, memoryItems);
+async function clearChat() {
+  if (appState.connected) {
+    const agent = await apiRequest("/agent/reset", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    appState.agent.conversation = agent.conversation;
+    appState.agent.memory = agent.memory;
+  } else {
+    appState.agent.conversation = [...fallbackData.agent.conversation];
+    appState.agent.memory = [...fallbackData.agent.memory];
+    syncLocalPrototype();
+  }
+
   renderChat();
   renderMemory();
-};
+}
 
-setText("currentStatus", data.dashboard.currentStatus);
-setText("configuredPortals", data.dashboard.configuredPortals);
-setText("nextRun", data.dashboard.nextRun);
-setText("lastInvoice", data.dashboard.lastInvoice);
+async function connectLocalApi() {
+  try {
+    const [statusResponse, portalsResponse, activityResponse, agentResponse] = await Promise.all([
+      apiRequest("/status"),
+      apiRequest("/portals"),
+      apiRequest("/activity"),
+      apiRequest("/agent"),
+    ]);
 
-renderPortalCards();
-renderList("runHistory", data.runs, "state");
-renderList("invoiceHistory", data.invoices);
-renderList("errorHistory", data.errors);
-renderLogic();
-renderRoadmap();
-renderSuggestions();
-renderChat();
-renderMemory();
+    appState.connected = true;
+    appState.dashboard.currentStatus = statusResponse.status.current_status;
+    appState.dashboard.configuredPortals = statusResponse.status.configured_portals;
+    appState.dashboard.nextRun = statusResponse.status.next_run;
+    appState.dashboard.lastInvoice = statusResponse.status.last_invoice;
+    appState.portals = portalsResponse.portals;
+    appState.runs = activityResponse.runs;
+    appState.invoices = activityResponse.invoices;
+    appState.errors = activityResponse.errors;
+    appState.agent.conversation = agentResponse.conversation;
+    appState.agent.memory = agentResponse.memory;
+  } catch (_error) {
+    appState.connected = false;
+  }
+}
 
-document.getElementById("chatForm").addEventListener("submit", handleChatSubmit);
-document.getElementById("clearChatButton").addEventListener("click", clearChat);
+function bindEvents() {
+  document.getElementById("chatForm").addEventListener("submit", handleChatSubmit);
+  document.getElementById("clearChatButton").addEventListener("click", clearChat);
+}
+
+async function bootstrap() {
+  await connectLocalApi();
+  renderDashboard();
+  renderPortalCards();
+  renderActivity();
+  renderLogic();
+  renderRoadmap();
+  renderSuggestions();
+  renderChat();
+  renderMemory();
+  bindEvents();
+}
+
+bootstrap();

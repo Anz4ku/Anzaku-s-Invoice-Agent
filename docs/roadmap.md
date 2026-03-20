@@ -1,19 +1,18 @@
-# Roadmap: From Visual Prototype To Orange Automation
+# Roadmap: From Control Panel To Real Orange Automation
 
 ## Phase 1: Product Shape
 
-Delivered in this repository now:
+Delivered:
 
 - static dashboard prototype
-- mock portal configuration
-- mock activity and history
-- human-like agent loop explanation
-- Orange integration roadmap cards
-- Python scaffold only
+- multi-portal configuration UI
+- operator-to-agent chat
+- local worker API
+- local persistence for portal state, memory, and audit history
 
 ## Phase 2: Orange Discovery
 
-Next engineering step:
+Next:
 
 - inspect the Orange portal manually
 - map the login flow
@@ -21,14 +20,14 @@ Next engineering step:
 - identify invoice timing and naming patterns
 - collect example invoice PDFs
 
-## Phase 3: Local Worker Foundation
+## Phase 3: Worker Foundation
 
 Build the real local worker around:
 
 - browser session management
-- credentials loading from local environment
-- audit logging
-- local file download management
+- credential loading from local environment
+- portal-specific profile loading
+- reliable file download handling
 - retry and verification rules
 
 ## Phase 4: Orange MVP Automation
@@ -39,25 +38,27 @@ Implement:
 - billing page navigation
 - invoice detection
 - PDF download
+- local save to the configured folder
 - invoice parse and validation
 
-Definition of done for this phase:
+Definition of done:
 
-- one real Orange invoice can be downloaded locally with a reliable audit trail
+- one real Orange invoice can be downloaded locally and saved to the operator-selected folder with an audit trail
 
-## Phase 5: Operator Feedback Loop
+## Phase 5: Learning And Scheduling
 
 Add:
 
-- persistent run history
-- memory of successful paths
-- better failure explanations
-- optional email sending
+- memory of successful portal paths
+- learned invoice timing windows
+- recurring scheduling
+- pause, retry, and operator override logic
 
-## Phase 6: Connect UI And Worker
+## Phase 6: Multiportal Expansion
 
-After the Orange local worker is stable:
+Add:
 
-- connect the frontend to real local run data
-- decide whether to use a local API, file-based sync, or future server
-- keep GitHub Pages as the interface if a static-first model still fits
+- portal plugin pattern
+- provider-specific adapters
+- unified run model across portals
+- operator controls for multiple credential sets and destination folders

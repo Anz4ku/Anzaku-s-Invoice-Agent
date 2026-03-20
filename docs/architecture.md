@@ -2,46 +2,48 @@
 
 ## Purpose
 
-This project is being designed in two layers:
+This project is now split into two concrete layers:
 
-- a static product interface for visibility and configuration
-- a local execution worker for the real automation
+- a static interface for the operator
+- a local worker API for real state and future automation
 
-This separation keeps the architecture clean from the beginning and avoids confusing the dashboard with the worker.
+This keeps the GitHub Pages frontend simple while letting the local machine own secrets, state, and execution.
 
 ## High-Level Model
 
 ```text
 GitHub repository
-├── frontend/   static dashboard prototype
-├── app/        local Python worker scaffold
-└── docs/       architecture, user flow, roadmap
+├── frontend/   static dashboard and operator chat
+├── app/        local worker API and future browser automation
+├── docs/       architecture, user flow, roadmap
+└── data/       local state and audit history
 ```
 
 ## Responsibilities
 
 ### `frontend/`
 
-The frontend is a GitHub Pages-friendly interface layer. In this phase it is purely visual and works with mock data.
-
 Responsibilities:
 
-- explain the product clearly
-- show portal setup concepts
-- show run history concepts
-- communicate the human-like agent loop
-- provide a future-facing control panel design
+- show portal configuration
+- let the operator coach the agent
+- display run activity and remembered guidance
+- stay deployable on GitHub Pages
 
 Non-responsibilities:
 
 - running Python
-- opening portals
-- downloading invoices
 - storing secrets
+- controlling Playwright directly
 
 ### `app/`
 
-The Python app is the future local worker.
+Responsibilities now:
+
+- expose a local HTTP API
+- store portal profiles and agent memory
+- record audit events
+- provide a safe bridge between the static frontend and the local machine
 
 Responsibilities later:
 
@@ -49,40 +51,36 @@ Responsibilities later:
 - authenticate into portals
 - navigate billing sections
 - download invoice PDFs
-- parse invoice data
-- write audit history
-- remember what worked
+- validate and parse invoices
 
-Non-responsibilities in this phase:
+### `data/`
 
-- production automation
-- backend API
-- cloud deployment
+Responsibilities:
 
-### `docs/`
-
-The docs explain how the product fits together before engineering complexity grows.
+- hold local JSON state
+- keep audit history on disk
+- stay outside GitHub Pages
 
 ## Deployment Model
 
 ### GitHub
 
-GitHub stores the source code, documentation, and frontend assets.
+Stores the source code, docs, and frontend assets.
 
 ### GitHub Pages
 
-GitHub Pages publishes the static dashboard. It is a presentation layer only.
+Publishes the static control panel only.
 
 ### Local Computer
 
-The local machine runs the actual Python worker. Credentials, downloads, browser state, and local execution remain outside GitHub Pages.
+Runs the local worker API and later the real browser automation.
 
-## Future Evolution
+## Why This Shape Matters
 
-Later, the architecture can evolve in either of these directions:
+This structure supports the target product requirements:
 
-1. Keep the worker local and let the frontend remain a static project site.
-2. Add a small API or local desktop bridge that lets the dashboard talk to the worker.
-3. Move the worker to a server when operational requirements justify it.
-
-The current structure supports all three without rethinking the frontend from scratch.
+- multi-portal configuration
+- editable operator control
+- local credentials and local file paths
+- agent memory and future scheduling
+- a public UI layer without exposing the worker itself

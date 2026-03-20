@@ -3,6 +3,22 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+
+@dataclass
+class PortalProfile:
+    """Editable operator profile for a portal."""
+
+    id: str
+    name: str
+    status: str
+    frequency: str
+    invoice_window: str
+    target_email: str
+    download_folder: str
+    notes: str
+    credentials_label: str
 
 
 class BasePortal(ABC):
@@ -12,16 +28,16 @@ class BasePortal(ABC):
 
     @abstractmethod
     def login(self) -> None:
-        """TODO: authenticate into the provider portal."""
+        """Authenticate into the provider portal."""
 
     @abstractmethod
     def open_billing_area(self) -> None:
-        """TODO: navigate to the billing or invoices section."""
+        """Navigate to the billing or invoices section."""
 
     @abstractmethod
     def find_invoice(self, period: str) -> None:
-        """TODO: locate the target invoice for a billing period."""
+        """Locate the target invoice for a billing period."""
 
     @abstractmethod
     def download_invoice(self, period: str) -> None:
-        """TODO: save the target invoice PDF locally."""
+        """Save the target invoice PDF locally."""

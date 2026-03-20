@@ -189,6 +189,12 @@ body::before {
   gap: 18px;
 }
 
+.chat-mode-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .agent-chat-header {
   display: flex;
   justify-content: space-between;
@@ -313,6 +319,41 @@ body::before {
 .overview-card.neutral { background: linear-gradient(180deg, #faf8f3, #ece6d8); }
 .portal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+.portal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0 14px;
+}
+
+.field-group {
+  display: grid;
+  gap: 8px;
+}
+
+.field-group span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.field-group input,
+.field-group select,
+.field-group textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.field-group-full {
+  margin-top: 6px;
+}
+
 .portal-header, .list-header {
   display: flex;
   justify-content: space-between;
@@ -421,6 +462,7 @@ body::before {
     border-bottom: 1px solid var(--line);
   }
   .metrics-grid, .agent-layout, .overview-grid, .portal-grid, .activity-layout, .logic-flow, .roadmap-grid { grid-template-columns: 1fr; }
+  .portal-form-grid { grid-template-columns: 1fr; }
   .logic-step::after { display: none; }
   .section-heading, .hero-card { flex-direction: column; align-items: start; }
   .chat-message { max-width: 100%; }

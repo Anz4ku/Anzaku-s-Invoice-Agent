@@ -1,91 +1,82 @@
 # AI Invoice Agent
 
-This repository is organized around two separate concerns from day one:
+This repository is organized around two separate concerns:
 
-- `frontend/`: a static control panel prototype that can be published with GitHub Pages
-- `app/`: a lightweight Python scaffold for the future local invoice worker
+- `frontend/`: a static control panel that can be published with GitHub Pages
+- `app/`: a local Python worker API that stores configuration, memory, and run history
 
-The important constraint is deliberate: GitHub Pages hosts the interface, not the Python bot. The actual automation worker runs on your local computer for now.
+GitHub Pages hosts the interface, not the Python bot. The actual worker runs on your computer for now.
+
+## What Is Real Now
+
+You already have:
+
+- a published static dashboard
+- editable multi-portal configuration cards
+- an operator-to-agent chat area
+- local browser fallback mode for the chat and portal settings
+- a local Python API that can persist portal configuration, memory, and activity
+- JSON state and JSONL audit logging on the local machine
+
+What is still not implemented:
+
+- real Playwright automation
+- real Orange login and billing navigation
+- actual invoice download and PDF validation
+- automatic scheduling
 
 ## What GitHub Is Used For
 
-GitHub is the source-of-truth for:
+GitHub stores:
 
-- project code
-- visual prototype
-- architecture documentation
-- roadmap and product decisions
-
-It is where the project is versioned and shared.
+- source code
+- frontend assets
+- documentation
+- workflow and product design
 
 ## What GitHub Pages Is Used For
 
-GitHub Pages is only used to publish the static frontend inside `frontend/`.
+GitHub Pages only publishes the static `frontend/`.
 
-That means GitHub Pages can host:
+It can host:
 
-- dashboard screens
-- mock data views
-- product explanations
-- future control-panel UI
+- dashboard UI
+- portal setup screens
+- activity views
+- agent chat interface
 
 It does not run:
 
 - Python
 - Playwright
 - invoice downloads
-- portal login automation
+- secrets
 
-## What Runs Locally On Your Computer
+## What Runs Locally
 
-The future worker in `app/` will run locally and eventually handle:
+The local worker API in `app/` handles:
 
-- logging into portals such as Orange
-- navigating billing pages
-- downloading invoice PDFs
-- extracting invoice data
-- remembering successful patterns
-- writing audit logs
+- portal profiles
+- agent memory
+- operator chat persistence
+- test run creation
+- audit events
 
-In this phase, the Python side is only a placeholder scaffold.
+Later, this same local layer will also handle:
 
-## What The Interface Does
-
-The frontend is a visual product prototype. It helps you:
-
-- understand the product shape
-- explain the workflow to others
-- visualize portal setup and run history
-- define what the future control panel should feel like
-
-## What The Bot Does
-
-Right now, the bot does not perform real automation. The Python files exist to define future boundaries and responsibilities.
-
-## What Is Real Now Vs Planned Later
-
-Real now:
-
-- static dashboard prototype in `frontend/`
-- mock data for realistic screens
-- architecture, user-flow, and roadmap docs
-- Python placeholder modules for future local execution
-
-Planned later:
-
-- real Orange login flow
-- billing-page navigation
-- invoice detection and PDF download
-- email sending
-- persistence and scheduling
-- connection between the UI and the local worker
+- browser automation
+- portal login
+- invoice detection
+- PDF download
+- parsing and validation
 
 ## Folder Structure
 
 ```text
-frontend/   static GitHub Pages-friendly UI prototype
-app/        local Python worker scaffold
-docs/       architecture, user flow, and roadmap docs
+frontend/   GitHub Pages-friendly control panel
+app/        local worker API and future automation runtime
+docs/       architecture, user flow, and roadmap
+data/       local JSON state and JSONL audit files
 ```
 
 ## Preview The Frontend Locally
@@ -102,33 +93,49 @@ Then open:
 http://localhost:8000/frontend/
 ```
 
-You can also open `frontend/index.html` directly, but a local server is better because it matches how static hosting behaves.
+## Run The Local Worker API
+
+From the repository root:
+
+```bash
+python -m app.main --host 127.0.0.1 --port 8765
+```
+
+When the API is running, the GitHub Pages frontend or the local frontend will connect to:
+
+```text
+http://127.0.0.1:8765/api
+```
+
+That enables:
+
+- saving portal changes locally
+- storing agent chat and memory locally
+- creating test runs from the UI
+
+## Operator Workflow Right Now
+
+1. Open the frontend.
+2. Start the local API on your machine.
+3. Edit portal settings such as download folder, email, status, and credentials label.
+4. Use the chat to teach the agent what to observe, verify, and remember.
+5. Trigger a portal test from the UI.
+6. Review stored runs and memory.
 
 ## Publish The Frontend To GitHub Pages
 
-Recommended manual flow:
+This repo already contains a GitHub Actions workflow that deploys `frontend/` to GitHub Pages.
 
-1. Push this repository to GitHub.
-2. Open repository `Settings`.
-3. Open `Pages`.
-4. Choose the branch you want to publish from.
-5. Set the folder to `/frontend` if available in your GitHub Pages configuration.
-6. Save and wait for the Pages deployment URL.
+Once you push changes to `main`, GitHub Pages republishes the static frontend.
 
-If your Pages setup does not allow `/frontend` directly, the next phase can add a small GitHub Actions workflow that publishes the `frontend/` folder automatically.
+## Current Local Files
 
-## Local Python Scaffold
+The local worker now uses:
 
-The current Python scaffold is intentionally minimal and non-operational:
+- `data/state.json` for editable state
+- `data/audit/events.jsonl` for audit history
 
-- [main.py](C:\Users\moise\Documents\Invoice agent\Anzaku-s-Invoice-Agent\app\main.py)
-- [base.py](C:\Users\moise\Documents\Invoice agent\Anzaku-s-Invoice-Agent\app\portals\base.py)
-- [orange.py](C:\Users\moise\Documents\Invoice agent\Anzaku-s-Invoice-Agent\app\portals\orange.py)
-- [parser.py](C:\Users\moise\Documents\Invoice agent\Anzaku-s-Invoice-Agent\app\invoices\parser.py)
-- [logger.py](C:\Users\moise\Documents\Invoice agent\Anzaku-s-Invoice-Agent\app\audit\logger.py)
-- [store.py](C:\Users\moise\Documents\Invoice agent\Anzaku-s-Invoice-Agent\app\memory\store.py)
-
-They exist to show responsibility boundaries before real automation starts.
+These files are created automatically when you run the local API.
 
 ## Supporting Docs
 

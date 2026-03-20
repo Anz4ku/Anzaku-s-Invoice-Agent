@@ -1,7 +1,7 @@
 """Orange portal scaffold.
 
-This file only defines the future integration shape.
-No real automation is implemented in this phase.
+This module still does not perform real automation, but it defines the
+responsibilities of the first real portal implementation.
 """
 
 from __future__ import annotations
@@ -13,17 +13,13 @@ class OrangePortal(BasePortal):
     name = "orange"
 
     def login(self) -> None:
-        # TODO: add Orange login flow using local credentials and browser automation.
-        raise NotImplementedError("Orange login is not implemented yet.")
+        raise NotImplementedError("TODO: implement Orange login flow using local credentials.")
 
     def open_billing_area(self) -> None:
-        # TODO: navigate to the Orange billing page in a resilient way.
-        raise NotImplementedError("Orange billing navigation is not implemented yet.")
+        raise NotImplementedError("TODO: implement resilient Orange billing navigation.")
 
     def find_invoice(self, period: str) -> None:
-        # TODO: find the invoice corresponding to the requested billing period.
-        raise NotImplementedError("Orange invoice detection is not implemented yet.")
+        raise NotImplementedError("TODO: locate the invoice for the requested Orange period.")
 
     def download_invoice(self, period: str) -> None:
-        # TODO: download the invoice PDF and save it to the local folder.
-        raise NotImplementedError("Orange invoice download is not implemented yet.")
+        raise NotImplementedError("TODO: download the Orange invoice PDF into the configured local folder.")
