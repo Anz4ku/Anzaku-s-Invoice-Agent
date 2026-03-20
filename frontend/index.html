@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Invoice Agent Control Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">IA</span>
+          <div>
+            <p class="eyebrow">Control Panel</p>
+            <h1>AI Invoice Agent</h1>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#dashboard">Dashboard</a>
+          <a href="#configuration">Portal Configuration</a>
+          <a href="#activity">Activity & History</a>
+          <a href="#logic">Human-like Logic</a>
+          <a href="#orange">Orange Roadmap</a>
+        </nav>
+        <div class="sidebar-note">
+          <p>This interface is a visual prototype.</p>
+          <p>The real worker will run locally in Python later.</p>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <section id="dashboard" class="hero-card">
+          <div>
+            <p class="eyebrow">Phase 1</p>
+            <h2>Design the product before building the bot.</h2>
+            <p class="hero-copy">
+              This dashboard helps you visualize how the invoice agent will be
+              configured, monitored, and explained to operators. All data shown
+              below is mock data for product design only.
+            </p>
+          </div>
+          <div class="status-panel">
+            <span class="status-pill">Prototype Ready</span>
+            <p class="status-caption">Local worker not connected yet</p>
+          </div>
+        </section>
+
+        <section class="grid metrics-grid">
+          <article class="metric-card">
+            <p class="label">Current status</p>
+            <h3 id="currentStatus">Preparing Orange pilot</h3>
+            <p class="subtle">The product is in interface-first planning mode.</p>
+          </article>
+          <article class="metric-card">
+            <p class="label">Configured portals</p>
+            <h3 id="configuredPortals">0 real, 2 planned</h3>
+            <p class="subtle">Orange is the first real target.</p>
+          </article>
+          <article class="metric-card">
+            <p class="label">Next planned run</p>
+            <h3 id="nextRun">April 3, 2026 at 09:00</h3>
+            <p class="subtle">Shown as a future scheduling concept.</p>
+          </article>
+          <article class="metric-card">
+            <p class="label">Last successful invoice</p>
+            <h3 id="lastInvoice">Orange · March 2026</h3>
+            <p class="subtle">Mock result used to shape the UI.</p>
+          </article>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">How it works</p>
+              <h2>Simple product view</h2>
+            </div>
+            <p class="section-copy">
+              The control panel explains the system, while the future Python
+              worker performs the actual portal actions locally on your machine.
+            </p>
+          </div>
+          <div class="overview-grid">
+            <article class="overview-card warm">
+              <h3>Frontend</h3>
+              <p>Static dashboard for setup, visibility, and product clarity.</p>
+            </article>
+            <article class="overview-card cool">
+              <h3>Local worker</h3>
+              <p>Future Python automation for login, download, parsing, and audit.</p>
+            </article>
+            <article class="overview-card neutral">
+              <h3>Future connection</h3>
+              <p>Later, the dashboard can talk to the worker through an API or local service.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="configuration" class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Portal Configuration</p>
+              <h2>Define how each portal should behave</h2>
+            </div>
+            <p class="section-copy">
+              This is a visual form only in v1. It shows the product shape for
+              operators before real save actions exist.
+            </p>
+          </div>
+          <div id="portalCards" class="portal-grid"></div>
+        </section>
+
+        <section id="activity" class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Activity & History</p>
+              <h2>See what happened recently</h2>
+            </div>
+            <p class="section-copy">
+              The future product should make success, failures, downloads, and
+              operator confidence easy to understand at a glance.
+            </p>
+          </div>
+          <div class="activity-layout">
+            <div>
+              <h3 class="block-title">Recent runs</h3>
+              <div id="runHistory" class="list-stack"></div>
+            </div>
+            <div>
+              <h3 class="block-title">Downloaded invoices</h3>
+              <div id="invoiceHistory" class="list-stack"></div>
+            </div>
+            <div>
+              <h3 class="block-title">Typical errors</h3>
+              <div id="errorHistory" class="list-stack"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="logic" class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Human-like Agent Logic</p>
+              <h2>Explain the behavior in plain language</h2>
+            </div>
+            <p class="section-copy">
+              This loop is the core promise of the product: act like a careful
+              human operator, not a brittle script.
+            </p>
+          </div>
+          <div id="logicSteps" class="logic-flow"></div>
+        </section>
+
+        <section id="orange" class="section-card roadmap-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Future Orange Integration</p>
+              <h2>First real automation target</h2>
+            </div>
+            <p class="section-copy">
+              Orange will be the first real portal implemented after the product
+              structure and interface feel right.
+            </p>
+          </div>
+          <div id="roadmapItems" class="roadmap-grid"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./mock-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
