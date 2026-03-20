@@ -24,6 +24,7 @@
         </div>
         <nav class="sidebar-nav">
           <a href="#dashboard">Dashboard</a>
+          <a href="#agent">Agent Chat</a>
           <a href="#configuration">Portal Configuration</a>
           <a href="#activity">Activity & History</a>
           <a href="#logic">Human-like Logic</a>
@@ -73,6 +74,61 @@
             <h3 id="lastInvoice">Orange · March 2026</h3>
             <p class="subtle">Mock result used to shape the UI.</p>
           </article>
+        </section>
+
+        <section id="agent" class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Agent Chat</p>
+              <h2>Talk to the agent and help it learn</h2>
+            </div>
+            <p class="section-copy">
+              This prototype simulates how an operator could teach the agent
+              what to look for, what to verify, and what to remember for the
+              next portal run.
+            </p>
+          </div>
+          <div class="agent-layout">
+            <div class="agent-chat-card">
+              <div class="agent-chat-header">
+                <div>
+                  <p class="label">Conversation</p>
+                  <h3>Operator to agent</h3>
+                </div>
+                <span class="chip manual">Prototype chat</span>
+              </div>
+              <div id="chatMessages" class="chat-messages"></div>
+              <div id="chatSuggestions" class="chat-suggestions"></div>
+              <form id="chatForm" class="chat-composer">
+                <textarea
+                  id="chatInput"
+                  rows="3"
+                  placeholder="Example: When you enter Orange, first look for Facturas or Billing before clicking anything."
+                ></textarea>
+                <div class="chat-actions">
+                  <button id="clearChatButton" class="button-ghost" type="button">Clear</button>
+                  <button class="button-primary" type="submit">Send to agent</button>
+                </div>
+              </form>
+            </div>
+            <div class="agent-side-panel">
+              <article class="memory-card">
+                <p class="label">What the agent would remember</p>
+                <h3>Working memory</h3>
+                <div id="memoryList" class="memory-list"></div>
+              </article>
+              <article class="memory-card">
+                <p class="label">Coaching examples</p>
+                <h3>Good instructions</h3>
+                <ul class="teaching-list">
+                  <li>Describe what label the agent should look for first.</li>
+                  <li>Explain what success looks like after a click.</li>
+                  <li>Tell it what to do if the page does not match expectations.</li>
+                  <li>Use portal words like Billing, Facturas, PDF, or Download.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
         </section>
 
         <section class="section-card">

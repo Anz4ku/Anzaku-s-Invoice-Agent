@@ -53,12 +53,12 @@ window.mockData = {
     {
       title: "Orange Spain · INV-2026-03",
       timestamp: "Downloaded March 19, 2026",
-      details: "Total €128.40 · Stored in C:\\Invoices\\Orange",
+      details: "Total EUR 128.40 · Stored in C:\\Invoices\\Orange",
     },
     {
       title: "Orange Spain · INV-2026-02",
       timestamp: "Downloaded February 19, 2026",
-      details: "Total €126.70 · Operator approved",
+      details: "Total EUR 126.70 · Operator approved",
     },
   ],
   errors: [
@@ -96,10 +96,52 @@ window.mockData = {
     },
   ],
   roadmap: [
-    { title: "Login", description: "Open the Orange portal and handle the sign-in flow with local credentials." },
-    { title: "Billing page", description: "Reach the billing or invoices area using stable labels and visible navigation." },
-    { title: "Invoice detection", description: "Find the invoice matching the expected billing period." },
-    { title: "PDF download", description: "Save the invoice PDF safely to the chosen local folder." },
-    { title: "Email sending", description: "Later, send the downloaded invoice or a run summary to the target email." },
+    {
+      title: "Login",
+      description: "Open the Orange portal and handle the sign-in flow with local credentials.",
+    },
+    {
+      title: "Billing page",
+      description: "Reach the billing or invoices area using stable labels and visible navigation.",
+    },
+    {
+      title: "Invoice detection",
+      description: "Find the invoice matching the expected billing period.",
+    },
+    {
+      title: "PDF download",
+      description: "Save the invoice PDF safely to the chosen local folder.",
+    },
+    {
+      title: "Email sending",
+      description: "Later, send the downloaded invoice or a run summary to the target email.",
+    },
   ],
+  agent: {
+    suggestions: [
+      "When Orange opens, look for Facturas first.",
+      "If the billing page changes, take a screenshot and stop.",
+      "Remember the invoice window is usually days 3 to 7.",
+      "Teach the agent what a successful PDF download looks like.",
+    ],
+    memory: [
+      "Orange portal should be checked monthly.",
+      "Preferred folder: C:\\Invoices\\Orange",
+      "Operator wants resilient navigation over fragile selectors.",
+    ],
+    conversation: [
+      {
+        role: "agent",
+        text: "I can help you shape how the future worker should behave. Tell me what to look for, what to verify, or what I should remember about Orange.",
+      },
+      {
+        role: "operator",
+        text: "When you enter Orange, first check whether you are in Billing or Facturas before clicking anything else.",
+      },
+      {
+        role: "agent",
+        text: "Understood. I would observe the page first, confirm I can see Billing or Facturas, and only then continue to the invoice area.",
+      },
+    ],
+  },
 };
