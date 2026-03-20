@@ -5,10 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ai-invoice-agent"
 version = "0.1.0"
-description = "Frontend-first prototype and local Python scaffold for an AI invoice agent."
+description = "Frontend plus local worker for an AI invoice agent."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "playwright>=1.52.0",
+  "pypdf>=5.0.0",
+  "python-dotenv>=1.0.1",
+]
 
 [tool.setuptools]
 include-package-data = true

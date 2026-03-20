@@ -19,6 +19,15 @@ class PortalProfile:
     download_folder: str
     notes: str
     credentials_label: str
+    login_url: str = ""
+    billing_url: str = ""
+    billing_link_text: str = "Facturas"
+    invoice_match_text: str = ""
+    download_button_text: str = "Descargar PDF"
+    username_selector: str = "input[type='email'], input[type='text']"
+    password_selector: str = "input[type='password']"
+    submit_selector: str = "button[type='submit']"
+    headless: bool = True
 
 
 class BasePortal(ABC):
@@ -41,3 +50,7 @@ class BasePortal(ABC):
     @abstractmethod
     def download_invoice(self, period: str) -> None:
         """Save the target invoice PDF locally."""
+
+    @abstractmethod
+    def run_download(self, profile: PortalProfile) -> dict:
+        """Execute a real download attempt for the portal."""

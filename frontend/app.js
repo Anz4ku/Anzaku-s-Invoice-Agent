@@ -69,7 +69,13 @@ async function apiRequest(path, options = {}) {
   });
 
   if (!response.ok) {
-    const message = await response.text();
+    let message = `Request failed: ${response.status}`;
+    try {
+      const payload = await response.json();
+      message = payload.error || message;
+    } catch (_error) {
+      message = await response.text();
+    }
     throw new Error(message || `Request failed: ${response.status}`);
   }
 
@@ -162,6 +168,47 @@ function renderPortalCards() {
               <span>Credentials label</span>
               <input name="credentials_label" value="${escapeHtml(portal.credentials_label || "")}" />
             </label>
+            <label class="field-group">
+              <span>Login URL</span>
+              <input name="login_url" value="${escapeHtml(portal.login_url || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Billing URL</span>
+              <input name="billing_url" value="${escapeHtml(portal.billing_url || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Billing label</span>
+              <input name="billing_link_text" value="${escapeHtml(portal.billing_link_text || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Invoice match text</span>
+              <input name="invoice_match_text" value="${escapeHtml(portal.invoice_match_text || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Download label</span>
+              <input name="download_button_text" value="${escapeHtml(portal.download_button_text || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Headless</span>
+              <select name="headless">
+                <option value="true" ${portal.headless ? "selected" : ""}>true</option>
+                <option value="false" ${portal.headless ? "" : "selected"}>false</option>
+              </select>
+            </label>
+          </div>
+          <div class="portal-form-grid">
+            <label class="field-group">
+              <span>Username selector</span>
+              <input name="username_selector" value="${escapeHtml(portal.username_selector || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Password selector</span>
+              <input name="password_selector" value="${escapeHtml(portal.password_selector || "")}" />
+            </label>
+            <label class="field-group">
+              <span>Submit selector</span>
+              <input name="submit_selector" value="${escapeHtml(portal.submit_selector || "")}" />
+            </label>
           </div>
           <label class="field-group field-group-full">
             <span>Notes</span>
@@ -171,6 +218,7 @@ function renderPortalCards() {
             <button class="button-primary" type="button" data-action="save">Save</button>
             <button class="button-secondary" type="button" data-action="pause">Pause</button>
             <button class="button-ghost" type="button" data-action="test">Run test</button>
+            <button class="button-dark" type="button" data-action="download">Run download</button>
           </div>
         </article>
       `
@@ -198,13 +246,40 @@ function renderPortalCards() {
       await runPortalTest(card.dataset.portalId);
     });
   });
+
+  root.querySelectorAll("[data-action='download']").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const card = event.currentTarget.closest("[data-portal-id]");
+      await savePortalCard(card);
+      await runPortalDownload(card.dataset.portalId);
+    });
+  });
 }
 
 function collectPortalUpdates(card) {
-  const fields = ["status", "frequency", "invoice_window", "target_email", "download_folder", "notes", "credentials_label"];
-  return Object.fromEntries(
+  const fields = [
+    "status",
+    "frequency",
+    "invoice_window",
+    "target_email",
+    "download_folder",
+    "notes",
+    "credentials_label",
+    "login_url",
+    "billing_url",
+    "billing_link_text",
+    "invoice_match_text",
+    "download_button_text",
+    "username_selector",
+    "password_selector",
+    "submit_selector",
+    "headless",
+  ];
+  const updates = Object.fromEntries(
     fields.map((name) => [name, card.querySelector(`[name='${name}']`).value.trim()])
   );
+  updates.headless = updates.headless === "true";
+  return updates;
 }
 
 async function savePortalCard(card) {
@@ -249,6 +324,29 @@ async function runPortalTest(portalId) {
     appState.runs = appState.runs.slice(0, 20);
   }
 
+  renderActivity();
+}
+
+async function runPortalDownload(portalId) {
+  try {
+    if (appState.connected) {
+      const response = await apiRequest(`/portals/${portalId}/download`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      appState.runs = response.activity.runs;
+      appState.invoices = response.activity.invoices;
+      appState.errors = response.activity.errors;
+      appState.dashboard.lastInvoice = response.status.last_invoice;
+      appState.dashboard.currentStatus = response.status.current_status;
+    } else {
+      throw new Error("Start the local API before running a real download.");
+    }
+  } catch (error) {
+    window.alert(`Download failed: ${error.message}`);
+  }
+
+  renderDashboard();
   renderActivity();
 }
 

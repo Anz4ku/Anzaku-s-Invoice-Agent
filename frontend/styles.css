@@ -402,6 +402,7 @@ body::before {
 .button-primary { background: var(--ink); color: #fff8f0; }
 .button-secondary { background: var(--accent-soft); color: var(--ink); }
 .button-ghost { background: rgba(255, 255, 255, 0.7); color: var(--ink); }
+.button-dark { background: #34463c; color: #fff8f0; }
 
 .activity-layout {
   display: grid;

@@ -1,4 +1,4 @@
-"""Local HTTP API used by the frontend to manage the worker state."""
+"""Local HTTP API used by the frontend to manage worker state and real runs."""
 
 from __future__ import annotations
 
@@ -6,19 +6,23 @@ import json
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from app.audit.logger import AuditLogger
 from app.memory.store import LocalStateStore
+from app.portals.base import PortalProfile
+from app.portals.orange import OrangePortal
 
 
 class AgentService:
-    """Coordinates portal state, memory, and placeholder agent replies."""
+    """Coordinates portal state, memory, and real local actions."""
 
     def __init__(self, store: LocalStateStore, audit_logger: AuditLogger) -> None:
         self.store = store
         self.audit_logger = audit_logger
+        self.orange_portal = OrangePortal()
 
     def status(self) -> dict[str, Any]:
         return {
@@ -53,25 +57,86 @@ class AgentService:
         reply = self._build_reply(message)
         self.store.append_conversation("agent", reply)
         self.audit_logger.log_event("agent_chat", "Processed operator coaching", {"message": message})
-        return {
-            "reply": reply,
-            "agent": self.store.get_agent_state(),
-        }
+        return {"reply": reply, "agent": self.store.get_agent_state()}
 
     def run_portal_test(self, portal_id: str) -> dict[str, Any]:
-        portal = next((item for item in self.store.get_portals() if item["id"] == portal_id), None)
-        if portal is None:
-            raise KeyError(f"Unknown portal id: {portal_id}")
-
+        portal = self._portal_by_id(portal_id)
+        timestamp = datetime.now().strftime("%B %d, %Y · %H:%M")
         run = {
             "title": f"{portal['name']} operator test",
             "state": "success",
-            "timestamp": datetime.now().strftime("%B %d, %Y · %H:%M"),
+            "timestamp": timestamp,
             "details": "Prototype test queued through the local API. Real browser automation not connected yet.",
         }
         self.store.add_run(run)
         self.audit_logger.log_event("portal_test", f"Queued portal test for {portal_id}", run)
         return {"run": run, "activity": self.store.get_activity()}
+
+    def download_latest_invoice(self, portal_id: str) -> dict[str, Any]:
+        portal = self._portal_by_id(portal_id)
+        profile = PortalProfile(**portal)
+
+        if portal_id != "orange-spain":
+            raise RuntimeError(f"Real download flow is not implemented yet for portal '{portal_id}'.")
+
+        try:
+            result = self.orange_portal.run_download(profile)
+        except Exception as exc:
+            return self._record_failed_download(portal, portal_id, str(exc))
+
+        return self._record_successful_download(portal, portal_id, result)
+
+    def _record_failed_download(self, portal: dict[str, Any], portal_id: str, error_text: str) -> dict[str, Any]:
+        timestamp = datetime.now().strftime("%B %d, %Y · %H:%M")
+        error_entry = {
+            "title": f"{portal['name']} download failed",
+            "timestamp": timestamp,
+            "details": error_text,
+        }
+        run = {
+            "title": f"{portal['name']} invoice download",
+            "state": "failed",
+            "timestamp": timestamp,
+            "details": error_text,
+        }
+        self.store.add_error_entry(error_entry)
+        self.store.add_run(run)
+        self.audit_logger.log_event("portal_download_failed", f"Download failed for {portal_id}", {"error": error_text})
+        raise RuntimeError(error_text)
+
+    def _record_successful_download(
+        self,
+        portal: dict[str, Any],
+        portal_id: str,
+        result: dict[str, Any],
+    ) -> dict[str, Any]:
+        timestamp = datetime.now().strftime("%B %d, %Y · %H:%M")
+        invoice = result["invoice"]
+        invoice_entry = {
+            "title": f"{portal['name']} · {Path(result['saved_path']).name}",
+            "timestamp": f"Downloaded {timestamp}",
+            "details": f"Saved to {result['saved_path']} · {invoice['page_count']} pages",
+        }
+        run = {
+            "title": f"{portal['name']} invoice download",
+            "state": "success",
+            "timestamp": timestamp,
+            "details": f"Invoice saved to {result['saved_path']}",
+        }
+        status = self.store.update_status(
+            last_invoice=invoice_entry["title"],
+            current_status=f"Last run succeeded for {portal['name']}",
+        )
+        self.store.add_invoice_entry(invoice_entry)
+        self.store.add_run(run)
+        self.audit_logger.log_event("portal_download_success", f"Downloaded invoice for {portal_id}", result)
+        return {"result": result, "status": status, "activity": self.store.get_activity()}
+
+    def _portal_by_id(self, portal_id: str) -> dict[str, Any]:
+        portal = next((item for item in self.store.get_portals() if item["id"] == portal_id), None)
+        if portal is None:
+            raise KeyError(f"Unknown portal id: {portal_id}")
+        return portal
 
     def _memory_hints(self, message: str) -> list[str]:
         lowered = message.lower()
@@ -159,8 +224,18 @@ def create_app_handler(service: AgentService):
                     portal_id = parsed.path.removeprefix("/api/portals/").removesuffix("/test").strip("/")
                     self._json_response(service.run_portal_test(portal_id))
                     return
+                if parsed.path.startswith("/api/portals/") and parsed.path.endswith("/download"):
+                    portal_id = parsed.path.removeprefix("/api/portals/").removesuffix("/download").strip("/")
+                    self._json_response(service.download_latest_invoice(portal_id))
+                    return
             except KeyError as exc:
                 self._json_response({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+                return
+            except RuntimeError as exc:
+                self._json_response({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            except Exception as exc:
+                self._json_response({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
                 return
             self._json_response({"error": "Not found"}, HTTPStatus.NOT_FOUND)
 

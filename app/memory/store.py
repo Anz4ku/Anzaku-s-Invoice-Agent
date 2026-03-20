@@ -26,6 +26,15 @@ DEFAULT_STATE: dict[str, Any] = {
             "download_folder": "C:\\Invoices\\Orange",
             "notes": "First real portal planned for implementation.",
             "credentials_label": "ORANGE_MAIN",
+            "login_url": "https://www.orange.es/",
+            "billing_url": "",
+            "billing_link_text": "Facturas",
+            "invoice_match_text": "",
+            "download_button_text": "Descargar PDF",
+            "username_selector": "input[type='email'], input[type='text']",
+            "password_selector": "input[type='password']",
+            "submit_selector": "button[type='submit']",
+            "headless": True,
         },
         {
             "id": "utility-provider",
@@ -37,6 +46,15 @@ DEFAULT_STATE: dict[str, Any] = {
             "download_folder": "C:\\Invoices\\Utilities",
             "notes": "Placeholder example used to show multi-portal setup.",
             "credentials_label": "UTILITY_MAIN",
+            "login_url": "",
+            "billing_url": "",
+            "billing_link_text": "Billing",
+            "invoice_match_text": "",
+            "download_button_text": "Download PDF",
+            "username_selector": "input[type='email'], input[type='text']",
+            "password_selector": "input[type='password']",
+            "submit_selector": "button[type='submit']",
+            "headless": True,
         },
     ],
     "runs": [
@@ -131,6 +149,24 @@ class LocalStateStore:
             "invoices": state["invoices"],
             "errors": state["errors"],
         }
+
+    def add_invoice_entry(self, entry: dict[str, Any]) -> None:
+        state = self.load_state()
+        state["invoices"].insert(0, entry)
+        state["invoices"] = state["invoices"][:20]
+        self.save_state(state)
+
+    def add_error_entry(self, entry: dict[str, Any]) -> None:
+        state = self.load_state()
+        state["errors"].insert(0, entry)
+        state["errors"] = state["errors"][:20]
+        self.save_state(state)
+
+    def update_status(self, **updates: Any) -> dict[str, Any]:
+        state = self.load_state()
+        state["status"].update(updates)
+        self.save_state(state)
+        return state["status"]
 
     def get_agent_state(self) -> dict[str, Any]:
         return self.load_state()["agent"]
